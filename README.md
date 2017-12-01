@@ -1,16 +1,21 @@
 # chainer-StarGAN
-chainer implementation of StarGAN
+chainer v2 implementation of StarGAN  
 
-#Awknowlegement
+### Requirement  
+- chainer v2
+- cv2
+- pillow
+
+## Awknowlegement
 This repository utilizes codes of following impressive repositories  
 - [chainer-gan-lib](https://github.com/pfnet-research/chainer-gan-lib)  
 - [chainer-cyclegan](https://github.com/Aixile/chainer-cyclegan)  
 
-#Progress  
--[x] CelebA 
--[ ] RaFD 
+## Progress  
+- [x] CelebA 
+- [ ] RaFD 
 
-#Preparation
+## Preparation
 Download [CelebA dataset](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html).  
 ```
 source/
@@ -22,13 +27,13 @@ source/
 ```
 
 run make_dict.py as follows,
-```python
+```
 cd source
 python make_dict.py
 ``` 
 Then, you will get 3 json files, train.json, val.json and test.json.   
 
-#How to run
+## How to run
 Select attributes you use. Attribute checked by putting 1 on tail is valid.  
 ```
 0 5_o_Clock_Shadow
@@ -75,16 +80,16 @@ Select attributes you use. Attribute checked by putting 1 on tail is valid.
 In the above case, 8:Black_Hair, 9:Blond_Hair, 11:Brown_Hair, 20:Male and 39:Young are used in training.  
 
 Then, run train.py
-```python
+```
 python train.py -g 0 --out result --eval_folder
 ```
 
-#Known differences from [authors' original code](https://github.com/yunjey/StarGAN)
+## Known differences from [authors' original code](https://github.com/yunjey/StarGAN)
 - This repository uses UpdateBuffer in update.py to make learning more stable
 - Max iteration is 200000 by default, and linear learning rate annealing starts after 100000 iteration  
 
-#(Option)
+## (Option)
 To visualize the generation result of all cases of attributes, you can use make_html.py
-```python
+```
 python make_html.py <out folder> <eval folder> <iter>
 ```
