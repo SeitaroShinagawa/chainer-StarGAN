@@ -7,7 +7,7 @@ chainer v2 implementation of StarGAN
 - pillow
 
 ## Acknowledgement
-This repository utilizes codes of following impressive repositories  
+This repository utilizes the codes of following impressive repositories  
 - [chainer-gan-lib](https://github.com/pfnet-research/chainer-gan-lib)  
 - [chainer-cyclegan](https://github.com/Aixile/chainer-cyclegan)  
 
@@ -20,9 +20,9 @@ Download [CelebA dataset](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html).
 ```
 source/
 ├── annotation
-│   ├── list_attr_celeba.txt	#attribute lsit
+│   ├── list_attr_celeba.txt    #attribute lsit
 │   └── list_eval_partition.txt #train/val/test information
-├── img_align_celeba 			#image directory
+├── img_align_celeba            #image directory
 └── make_dict.py
 ```
 
