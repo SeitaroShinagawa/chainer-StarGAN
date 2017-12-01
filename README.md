@@ -6,7 +6,7 @@ chainer v2 implementation of StarGAN
 - cv2
 - pillow
 
-## Awknowlegement
+## Acknowledgement
 This repository utilizes codes of following impressive repositories  
 - [chainer-gan-lib](https://github.com/pfnet-research/chainer-gan-lib)  
 - [chainer-cyclegan](https://github.com/Aixile/chainer-cyclegan)  
