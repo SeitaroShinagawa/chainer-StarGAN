@@ -38,7 +38,7 @@ def main():
     parser.add_argument('--gen_class', default='StarGAN_Generator', help='Default generator class')
     parser.add_argument('--dis_class', default='StarGAN_Discriminator', help='Default discriminator class')
 
-    parser.add_argument("--n_dis", type=int, default=1, help='The number of loop of WGAN Discriminator')
+    parser.add_argument("--n_dis", type=int, default=6, help='The number of loop of WGAN Discriminator')
     parser.add_argument("--lambda_gp", type=float, default=10.0, help='lambda for gradient penalty of WGAN')
     parser.add_argument("--lambda_adv", type=float, default=1.0, help='lambda for adversarial loss')
     parser.add_argument("--lambda_cls", type=float, default=1.0, help='lambda for classification loss')
@@ -81,7 +81,7 @@ def main():
     test_iter = chainer.iterators.SerialIterator(train_dataset, test_batchsize) 
 
     #set generator and discriminator 
-    nc_size = len(train_dataset.att_exist_filter) #num of attribute
+    nc_size = len(att_list) #num of attribute
     gen = getattr(net, args.gen_class)(args.resize_to, nc_size)
     dis = getattr(net, args.dis_class)()
 
@@ -132,6 +132,7 @@ def main():
             'lambda_gp': args.lambda_gp,
             'image_size' : args.resize_to,
             'eval_folder' : args.eval_folder,
+            'nc_size': nc_size, 
             'learning_rate_anneal' : args.learning_rate_anneal,
             'learning_rate_anneal_start' : args.learning_rate_anneal_start,
             'dataset' : train_dataset
@@ -144,7 +145,7 @@ def main():
     trainer.extend(extensions.snapshot_object(
         dis, 'dis{.updater.iteration}.npz'), trigger=model_save_interval)
 
-    log_keys = ['epoch', 'iteration', 'loss_gen_adv', 'loss_dis_adv', 'loss_gen_cls', 'loss_dis_cls','loss_gen_rec', 'loss_gp']
+    log_keys = ['epoch', 'iteration', 'loss_dis_real', 'loss_dis_fake', 'loss_gen_fake', 'loss_dis_cls', 'loss_gen_cls','loss_gen_rec', 'loss_gp']
     trainer.extend(extensions.LogReport(keys=log_keys, trigger=(20, 'iteration')))
     trainer.extend(extensions.PrintReport(log_keys), trigger=(20, 'iteration'))
     trainer.extend(extensions.ProgressBar(update_interval=50))

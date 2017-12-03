@@ -215,7 +215,7 @@ class StarGAN_Generator(chainer.Chain):
         
         Attmap = self.xp.broadcast_to(att,(H,W,B,A))
         Attmap = chainer.Variable(self.xp.transpose(Attmap,(2,3,0,1)))
-
+        
         h = F.concat([x,Attmap],axis=1)
         
         for i in range(1, 13):

@@ -1,18 +1,15 @@
 # chainer-StarGAN
 chainer v2 implementation of StarGAN  
+### Caution: This code currently does not work well. Something wrong. 
 
 ### Requirement  
 - chainer v2
 - cv2
 - pillow
 
-## Acknowledgement
-This repository utilizes the codes of following impressive repositories  
-- [chainer-gan-lib](https://github.com/pfnet-research/chainer-gan-lib)  
-- [chainer-cyclegan](https://github.com/Aixile/chainer-cyclegan)  
-
-## Progress  
-- [x] CelebA 
+## Progress 
+Under testing on CelebA dataset
+- [ ] CelebA 
 - [ ] RaFD 
 
 ## Preparation
@@ -87,9 +84,16 @@ python train.py -g 0 --out result --eval_folder
 ## Known differences from [authors' original code](https://github.com/yunjey/StarGAN)
 - This repository uses UpdateBuffer in update.py to make learning more stable
 - Max iteration is 200000 by default, and linear learning rate annealing starts after 100000 iteration  
+- Instance normalization is replaced by mini-batch=1 batch normalization 
 
 ## (Option)
 To visualize the generation result of all cases of attributes, you can use make_html.py
 ```
 python make_html.py <out folder> <eval folder> <iter>
 ```
+
+## Acknowledgement
+This repository utilizes the codes of following impressive repositories  
+- [chainer-gan-lib](https://github.com/pfnet-research/chainer-gan-lib)  
+- [chainer-cyclegan](https://github.com/Aixile/chainer-cyclegan)  
+
