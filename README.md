@@ -9,8 +9,8 @@ chainer implementation of StarGAN
 
 To use v2, modify updater.py as below,
 ```pytohn
-L.119        #dydx = self.dis.differentiable_backward(xp.ones_like(y_mid.data))   #uncomment
-L.120        dydx, = chainer.grad([y_mid],[x_mid_v], enable_double_backprop=True) #comment out
+L.119        dydx = self.dis.differentiable_backward(xp.ones_like(y_mid.data))   #uncomment
+L.120        #dydx, = chainer.grad([y_mid],[x_mid_v], enable_double_backprop=True) #comment out
 ```
 
 ## Progress 
