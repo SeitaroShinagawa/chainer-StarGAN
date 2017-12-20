@@ -88,7 +88,7 @@ In the above case, 8:Black_Hair, 9:Blond_Hair, 11:Brown_Hair, 20:Male and 39:You
 
 Then, run train.py
 ```
-python train.py -g 0 --out result --eval_folder
+python train.py -g 0
 ```
 
 ## Known differences from [authors' original code](https://github.com/yunjey/StarGAN)
