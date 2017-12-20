@@ -4,6 +4,8 @@ import chainer.functions as F
 import chainer.links as L
 from chainer import Variable,cuda
 import numpy as np
+import math
+from instance_normalization import InstanceNormalization
 
 # differentiable backward functions
 
@@ -31,7 +33,6 @@ def backward_sigmoid(x_in, g):
     y = F.sigmoid(x_in)
     return g * y * (1 - y)
 
-
 def add_noise(h, test, sigma=0.2):
     xp = cuda.get_array_module(h.data)
     if test:
@@ -40,53 +41,72 @@ def add_noise(h, test, sigma=0.2):
         return h + sigma * xp.random.randn(*h.data.shape)
 
 class ResBlock(chainer.Chain):
-    def __init__(self, ch, bn=True, activation=F.relu):
-        self.bn = bn
+    def __init__(self, ch, norm="instance", activation=F.relu, noise=False):
+        self.use_norm = False if norm is None else True 
         self.activation = activation
         layers = {}
-        layers['c0'] = L.Convolution2D(ch, ch, 3, 1, 1)
-        layers['c1'] = L.Convolution2D(ch, ch, 3, 1, 1)
-        if bn:
-            layers['bn0'] = L.BatchNormalization(ch)
-            layers['bn1'] = L.BatchNormalization(ch)
+        w = chainer.initializers.Uniform(scale=math.sqrt(1/ch/3/3)) #same to pytorch conv2d initializaiton
+        layers['c0'] = L.Convolution2D(ch, ch, 3, 1, 1, initialW=w, nobias=True)
+        layers['c1'] = L.Convolution2D(ch, ch, 3, 1, 1, initialW=w, nobias=True)
+        if norm=="batch":
+            layers['norm0'] = L.BatchNormalization(ch, use_gamma=noise, use_beta=noise)
+            layers['norm1'] = L.BatchNormalization(ch, use_gamma=noise, use_beta=noise)
+        elif norm=="instance":
+            layers['norm0'] = InstanceNormalization(ch, use_gamma=noise, use_beta=noise)
+            layers['norm1'] = InstanceNormalization(ch, use_gamma=noise, use_beta=noise)
+
         super(ResBlock, self).__init__(**layers)
 
     def __call__(self, x):
         h = self.c0(x)
-        if self.bn:
-            h = self.bn0(h)
+        if self.use_norm:
+            h = self.norm0(h)
         h = self.activation(h)
         h = self.c1(h)
-        if self.bn:
-            h = self.bn1(h)
+        if self.use_norm:
+            h = self.norm1(h)
         return h + x
 
 
 class CBR(chainer.Chain):
-    def __init__(self, ch0, ch1, bn=True, sample='down', activation=F.relu, dropout=False, noise=False, slope=None):
-        self.bn = bn
+    def __init__(self, ch0, ch1, norm='instance', sample='down', activation=F.relu, dropout=False, noise=False, slope=None):
         self.activation = activation
         self.dropout = dropout
         self.sample = sample
         self.noise = noise
         self.slope = slope
         layers = {}
-        w = chainer.initializers.Normal(0.02)
+        #w = chainer.initializers.Normal(0.02)
+
+        self.use_norm = False if norm is None else True
+
         if sample=='down':
-            layers['c'] = L.Convolution2D(ch0, ch1, 4, 2, 1, initialW=w)
+            w = chainer.initializers.Uniform(scale=math.sqrt(1/ch0/4/4)) #same to pytorch conv2d initialization
+            layers['c'] = L.Convolution2D(ch0, ch1, 4, 2, 1, initialW=w, nobias=True)
         elif sample=='none-9':
-            layers['c'] = L.Convolution2D(ch0, ch1, 9, 1, 4, initialW=w)
+            w = chainer.initializers.Uniform(scale=math.sqrt(1/ch0/9/9))
+            layers['c'] = L.Convolution2D(ch0, ch1, 9, 1, 4, initialW=w, nobias=True)
         elif sample=='none-7':
-            layers['c'] = L.Convolution2D(ch0, ch1, 7, 1, 3, initialW=w)
+            w = chainer.initializers.Uniform(scale=math.sqrt(1/ch0/7/7))
+            layers['c'] = L.Convolution2D(ch0, ch1, 7, 1, 3, initialW=w, nobias=True)
         elif sample=='none-5':
-            layers['c'] = L.Convolution2D(ch0, ch1, 5, 1, 2, initialW=w)
+            w = chainer.initializers.Uniform(scale=math.sqrt(1/ch0/5/5))
+            layers['c'] = L.Convolution2D(ch0, ch1, 5, 1, 2, initialW=w, nobias=True)
         else:
-            layers['c'] = L.Convolution2D(ch0, ch1, 3, 1, 1, initialW=w)
-        if bn:
+            w = chainer.initializers.Uniform(scale=math.sqrt(1/ch0/3/3))
+            layers['c'] = L.Convolution2D(ch0, ch1, 3, 1, 1, initialW=w, nobias=True)
+        if norm=="batch":
             if self.noise:
-                layers['batchnorm'] = L.BatchNormalization(ch1, use_gamma=False)
+                layers['norm'] = L.BatchNormalization(ch1, use_gamma=True, use_beta=True)
             else:
-                layers['batchnorm'] = L.BatchNormalization(ch1)
+                layers['norm'] = L.BatchNormalization(ch1, use_gamma=False, use_beta=False)
+        elif norm=="instance":
+            if self.noise:
+                layers['norm'] = InstanceNormalization(ch1, use_gamma=True, use_beta=True)
+            else:
+                layers['norm'] = InstanceNormalization(ch1, use_gamma=False, use_beta=False)
+
+
         super(CBR, self).__init__(**layers)
 
     def __call__(self, x):
@@ -98,10 +118,10 @@ class CBR(chainer.Chain):
             h = self.c(h)
         else:
             print("unknown sample method %s"%self.sample)
-        if self.bn:
-            h = self.batchnorm(h)
-        if self.noise:
-            h = add_noise(h, test=self.test)
+        if self.use_norm:
+            h = self.norm(h)
+        #if self.noise:
+        #    h = add_noise(h, test=self.test)
         if self.dropout:
             h = F.dropout(h) #, train=not self.test)
         if not self.slope is None:
@@ -111,102 +131,22 @@ class CBR(chainer.Chain):
         return h
 
 
-class Generator_ResBlock_6(chainer.Chain):
-    def __init__(self):
-        super(Generator_ResBlock_6, self).__init__(
-            c1 = CBR(3, 32, bn=True, sample='none-7'),
-            c2 = CBR(32, 64, bn=True, sample='down'),
-            c3 = CBR(64, 128, bn=True, sample='down'),
-            c4 = ResBlock(128, bn=True),
-            c5 = ResBlock(128, bn=True),
-            c6 = ResBlock(128, bn=True),
-            c7 = ResBlock(128, bn=True),
-            c8 = ResBlock(128, bn=True),
-            c9 = ResBlock(128, bn=True),
-            c10 = CBR(128, 64, bn=True, sample='up'),
-            c11 = CBR(64, 32, bn=True, sample='up'),
-            c12 = CBR(32, 3, bn=True, sample='none-7', activation=F.tanh)
-        )
-
-    def __call__(self, x, test=False, volatile=False):
-        h = self.c1(x, test=test)
-        h = self.c2(h, test=test)
-        h = self.c3(h, test=test)
-        h = self.c4(h, test=test)
-        h = self.c5(h, test=test)
-        h = self.c6(h, test=test)
-        h = self.c7(h, test=test)
-        h = self.c8(h, test=test)
-        h = self.c9(h, test=test)
-        h = self.c10(h, test=test)
-        h = self.c11(h, test=test)
-        h = self.c12(h, test=test)
-        return h
-
-class Generator_ResBlock_9(chainer.Chain):
-    def __init__(self, img_size):
-        super(Generator_ResBlock_9, self).__init__(
-            c1 = CBR(3, 32, bn=True, sample='none-7'),
-            c2 = CBR(32+18, 64, bn=True, sample='down'),
-            c3 = CBR(64, 128, bn=True, sample='down'),
-            c4 = ResBlock(128, bn=True),
-            c5 = ResBlock(128, bn=True),
-            c6 = ResBlock(128, bn=True),
-            c7 = ResBlock(128, bn=True),
-            c8 = ResBlock(128, bn=True),
-            c9 = ResBlock(128, bn=True),
-            c10 = ResBlock(128, bn=True),
-            c11 = ResBlock(128, bn=True),
-            c12 = ResBlock(128, bn=True),
-            c13 = CBR(128, 64, bn=True, sample='up'),
-            c14 = CBR(64, 32, bn=True, sample='up'),
-            c15 = CBR(32, 3, bn=True, sample='none-7', activation=F.tanh)
-        )
-
-    def __call__(self, x, att, test=False, volatile=False):
-        B,ch,H,W = x.shape
-        B,A = att.shape
-        h = self.c1(x, test=test)
-        Att = np.ones((B,A,H,W)).astype("f")
-        for i in range(B):
-            tmp = att[i]
-            for j in range(A):
-                Att[i][j] = tmp[j]*np.ones((H,W)).astype("f")#Att[i][j]
-        Att = chainer.Variable(self.xp.asarray(Att),volatile=volatile)
-        h = F.concat([h,Att],axis=1)
-        h = self.c2(h, test=test)
-        h = self.c3(h, test=test)
-        h = self.c4(h, test=test)
-        h = self.c5(h, test=test)
-        h = self.c6(h, test=test) #c6: (1, 128, 16, 16), c7: (1, 128, 16, 16)
-        h = self.c7(h, test=test)
-        h = self.c8(h, test=test)
-        h = self.c9(h, test=test)
-        h = self.c10(h, test=test)
-        h = self.c11(h, test=test)
-        h = self.c12(h, test=test)
-        h = self.c13(h, test=test)
-        h = self.c14(h, test=test)
-        h = self.c15(h, test=test)
-        return h
-
-
 class StarGAN_Generator(chainer.Chain):
     def __init__(self, img_size, nc_size):
         self.nc_size = nc_size
         super(StarGAN_Generator, self).__init__(
-            c1 = CBR(3+nc_size, 64, bn=True, sample='none-7'),
-            c2 = CBR(64, 128, bn=True, sample='down'),
-            c3 = CBR(128, 256, bn=True, sample='down'),
-            c4 = ResBlock(256, bn=True),
-            c5 = ResBlock(256, bn=True),
-            c6 = ResBlock(256, bn=True),
-            c7 = ResBlock(256, bn=True),
-            c8 = ResBlock(256, bn=True),
-            c9 = ResBlock(256, bn=True),
-            c10 = CBR(256, 128, bn=True, sample='up'),
-            c11 = CBR(128, 64, bn=True, sample='up'),
-            c12 = CBR(64, 3, bn=True, sample='none-7', activation=F.tanh)
+            c1 = CBR(3+nc_size, 64, norm="instance", sample='none-7',noise=True),
+            c2 = CBR(64, 128, norm="instance", sample='down',noise=True),
+            c3 = CBR(128, 256, norm="instance", sample='down',noise=True),
+            c4 = ResBlock(256, norm="instance",noise=True),
+            c5 = ResBlock(256, norm="instance",noise=True),
+            c6 = ResBlock(256, norm="instance",noise=True),
+            c7 = ResBlock(256, norm="instance",noise=True),
+            c8 = ResBlock(256, norm="instance",noise=True),
+            c9 = ResBlock(256, norm="instance",noise=True),
+            c10 = CBR(256, 128, norm="instance", sample='up',noise=True),
+            c11 = CBR(128, 64, norm="instance", sample='up', noise=True),
+            c12 = CBR(64, 3, norm=None, sample='none-7', activation=F.tanh)
         )
 
     def __call__(self, x, att):
@@ -224,22 +164,25 @@ class StarGAN_Generator(chainer.Chain):
 
 
 class StarGAN_Discriminator(chainer.Chain):
-    def __init__(self, in_ch=3, n_down_layers=6, n_att=5, image_size=128):
+    def __init__(self, in_ch=3, n_down_layers=6, n_att=5):
         layers = {}
-        w = chainer.initializers.Normal(0.02)
         self.n_down_layers = n_down_layers
+        self.image_size = 2**(n_down_layers+1)
         self.n_att = n_att
 
         base = 64
-        layers['c0'] = CBR(in_ch, base, bn=False, sample='down', activation=F.leaky_relu)
+        layers['c0'] = CBR(in_ch, base, norm=None, sample='down', activation=F.leaky_relu, slope=0.01)
         
         for i in range(1,n_down_layers):
-            layers['c'+str(i)] = CBR(base, base*2, bn=False, sample='down', activation=F.leaky_relu, slope=0.01)
+            layers['c'+str(i)] = CBR(base, base*2, norm=None, sample='down', activation=F.leaky_relu, slope=0.01)
             base *= 2
 
+        cls_ksize = int(self.image_size/2**n_down_layers) 
+        w_out = chainer.initializers.Uniform(scale=math.sqrt(1/base/3**2))
+        w_cls = chainer.initializers.Uniform(scale=math.sqrt(1/base/cls_ksize**2))
         super(StarGAN_Discriminator, self).__init__(**layers,
-        out = L.Convolution2D(base, 1, 3, 1, 1), #PatchGAN (n_patch = base)
-        out_cls = L.Convolution2D(base, n_att, int(image_size/2**n_down_layers), 1, 0),
+        out = L.Convolution2D(base, 1, 3, 1, 1, nobias=True, initialW=w_out), #PatchGAN (n_patch = base)
+        out_cls = L.Convolution2D(base, n_att, cls_ksize, 1, 0, nobias=True, initialW=w_cls),
         )
 
     def __call__(self, x):
@@ -251,7 +194,7 @@ class StarGAN_Discriminator(chainer.Chain):
             self.h_dict["h"+str(i+1)] = getattr(self, 'c'+str(i))(self.h_dict["h"+str(i)])
 
         self.h_dis = getattr(self, 'out')(self.h_dict["h"+str(self.n_down_layers)]) #PatchGAN (B,1,n_patch,n_patch)
-        h_cls = F.leaky_relu(self.out_cls(self.h_dict["h"+str(self.n_down_layers)]),slope=0.01) # (B,n_att,1,1) 
+        h_cls = self.out_cls(self.h_dict["h"+str(self.n_down_layers)]) # (B,n_att,1,1) 
         h_cls = F.reshape(h_cls,(x.shape[0],self.n_att)) 
 
         return self.h_dis, h_cls

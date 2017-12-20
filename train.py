@@ -12,6 +12,7 @@ from common import celebA
 from updater import *
 from evaluation import *
 from common.record import record_setting
+#from chainerui.extensions import CommandsExtension
 
 def main():
     parser = argparse.ArgumentParser(
@@ -72,7 +73,7 @@ def main():
     print("attribute list:",",".join(att_name))
 
     #load dataset
-    train_dataset = getattr(celebA, args.load_dataset)(args.source_path, att_list, flip=args.flip, resize_to=args.resize_to, crop_to=args.crop_to)
+    train_dataset = getattr(celebA, args.load_dataset)(args.source_path, att_name, flip=args.flip, resize_to=args.resize_to, crop_to=args.crop_to)
     train_iter = chainer.iterators.MultiprocessIterator(
         train_dataset, args.batch_size, n_processes=4)
 
@@ -83,7 +84,7 @@ def main():
     #set generator and discriminator 
     nc_size = len(att_list) #num of attribute
     gen = getattr(net, args.gen_class)(args.resize_to, nc_size)
-    dis = getattr(net, args.dis_class)()
+    dis = getattr(net, args.dis_class)(n_down_layers=args.discriminator_layer_n)
 
     if args.load_gen_model != '':
         serializers.load_npz(args.load_gen_model, gen)
@@ -145,7 +146,7 @@ def main():
     trainer.extend(extensions.snapshot_object(
         dis, 'dis{.updater.iteration}.npz'), trigger=model_save_interval)
 
-    log_keys = ['epoch', 'iteration', 'loss_dis_real', 'loss_dis_fake', 'loss_gen_fake', 'loss_dis_cls', 'loss_gen_cls','loss_gen_rec', 'loss_gp']
+    log_keys = ['epoch', 'iteration', 'lr_g', 'lr_d', 'loss_dis_adv', 'loss_gen_adv', 'loss_dis_cls', 'loss_gen_cls','loss_gen_rec', 'loss_gp']
     trainer.extend(extensions.LogReport(keys=log_keys, trigger=(20, 'iteration')))
     trainer.extend(extensions.PrintReport(log_keys), trigger=(20, 'iteration'))
     trainer.extend(extensions.ProgressBar(update_interval=50))
@@ -154,7 +155,8 @@ def main():
         evaluation(gen, args.eval_folder, image_size=args.resize_to
         ), trigger=(args.eval_interval ,'iteration')
     )
-
+   
+    #trainer.extend(CommandsExtension())
     # Run the training
     trainer.run()
 

@@ -1,11 +1,6 @@
-import os
 import numpy as np
-from PIL import Image
-import six
 import json
 import cv2
-import glob
-from io import BytesIO
 import numpy as np
 from .datasets_base import datasets_base
 
@@ -22,9 +17,8 @@ class celebA_train(datasets_base):
         self.dataset_path = dataset_path
         self.att_dict = load_json(dataset_path+"/"+data_type+".json")
         self.imgAkey = [x for x in self.att_dict.keys()]
-        #self.imgBkey = [x for x in self.att_dict.keys()]
         self.attributes = [x for x in self.att_dict[self.imgAkey[0]]["attribute"].keys()]
-        self.att_exist_filter = att_list
+        self.att_names = att_list
 
     def __len__(self):
         return len(self.imgAkey)
@@ -34,8 +28,7 @@ class celebA_train(datasets_base):
         attributes is filtered, referenced to IcGAN 
         https://github.com/Guim3/IcGAN/blob/master/data/donkey_celebA.lua#L25
         """
-        attributes = [self.attributes[x] for x in self.att_exist_filter]
-        atts = np.array([(self.att_dict[key]["attribute"][x]+2)*0.5 for x in attributes],dtype=np.int32) #[-1,1] -> [0,1]
+        atts = np.array([(self.att_dict[key]["attribute"][x]+2)*0.5 for x in self.att_names],dtype=np.int32) #[-1,1] -> [0,1]
         return atts
 
     def do_resize(self, img, resize_to=128): #for shrinking
@@ -77,12 +70,11 @@ class celebA_train(datasets_base):
     def get_example(self, i):
         np.random.seed(None)
         idA = self.imgAkey[np.random.randint(0,len(self.imgAkey))]
-        idB = self.imgAkey[np.random.randint(0,len(self.imgAkey))]
 
         imgA = cv2.imread(self.dataset_path + "img_align_celeba/" + idA, cv2.IMREAD_COLOR)
          
         attA = self.load_att(idA)
-        attB = self.load_att(idB)
+        attB = np.random.permutation(attA)
         
         imgA = self.do_augmentation(imgA)
         imgA = self.preprocess_image(imgA)
