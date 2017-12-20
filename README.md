@@ -20,7 +20,7 @@ Under testing on CelebA dataset
 
 ![result](https://github.com/SeitaroShinagawa/chainer-StarGAN/blob/master/img/stargan.jpg)
 Probably, this code still has bugs.  
-This is the same setting to the [original code](https://github.com/yunjey/StarGAN). I confirmed that diffrent setting leads better result, e.g. use n_dis=1 lambda_adv=0.25
+This setting should be same to the [original code](https://github.com/yunjey/StarGAN). I confirmed that a diffrent setting leads better result, e.g. use n_dis=1 lambda_adv=0.25
 
 ## Preparation
 Download [CelebA dataset](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html).  
