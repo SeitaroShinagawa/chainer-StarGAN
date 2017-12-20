@@ -41,7 +41,7 @@ python make_dict.py
 Then, you will get 3 json files, train.json, val.json and test.json.   
 
 ## How to run
-Select attributes you use. Attribute checked by putting 1 on tail is valid.  
+Select attributes you use. The attributes you put 1 on tail are valid.  
 ```
 0 5_o_Clock_Shadow
 1 Arched_Eyebrows
