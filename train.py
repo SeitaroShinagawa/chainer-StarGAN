@@ -12,14 +12,14 @@ from common import celebA
 from updater import *
 from evaluation import *
 from common.record import record_setting
-#from chainerui.extensions import CommandsExtension
+from chainerui.extensions import CommandsExtension
 
 def main():
     parser = argparse.ArgumentParser(
         description='Train StarGAN')
     parser.add_argument('--source_path', default="source/celebA/",help="data resource Directory")
     parser.add_argument('--att_list_path', default="att_list.txt", help="attribute list")
-    parser.add_argument('--batch_size', '-b', type=int, default=1)
+    parser.add_argument('--batch_size', '-b', type=int, default=16)
     parser.add_argument('--max_iter', '-m', type=int, default=200000)
     parser.add_argument('--gpu', '-g', type=int, default=0,
                         help='GPU ID (negative value indicates CPU)')
@@ -117,7 +117,6 @@ def main():
         models=(gen, dis),
         iterator={
             'main': train_iter,
-            #'dis' : train2_iter,
             'test': test_iter
             },
         optimizer={
@@ -156,7 +155,7 @@ def main():
         ), trigger=(args.eval_interval ,'iteration')
     )
    
-    #trainer.extend(CommandsExtension())
+    trainer.extend(CommandsExtension())
     # Run the training
     trainer.run()
 

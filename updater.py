@@ -46,10 +46,16 @@ class Updater(chainer.training.StandardUpdater):
         
         #learning rate annealing () 
         if self._learning_rate_anneal_start < self._iter:
-            if opt_gen.alpha > 0:
+            if opt_gen.alpha > 10e-8:
                 opt_gen.alpha -= self._learning_rate_anneal
-            if opt_dis.alpha > 0:
+            else:
+                opt_gen.alpha = 10e-8
+
+            if opt_dis.alpha > 10e-8:
                 opt_dis.alpha -= self._learning_rate_anneal
+            else:
+                opt_dis.alpha = 10e-8 
+
         chainer.reporter.report({'lr_g': opt_gen.alpha})
         chainer.reporter.report({'lr_d': opt_dis.alpha})
         
