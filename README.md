@@ -82,9 +82,7 @@ python train.py -g 0 --out result --eval_folder
 ```
 
 ## Known differences from [authors' original code](https://github.com/yunjey/StarGAN)
-- This repository uses UpdateBuffer in update.py to make learning more stable
-- Max iteration is 200000 by default, and linear learning rate annealing starts after 100000 iteration  
-- Instance normalization is replaced by mini-batch=1 batch normalization 
+- The learning speed is much slower than original -- reconstruction loss of 30000 iter is the same to that of 3000 iter of original.
 
 ## (Option)
 To visualize the generation result of all cases of attributes, you can use make_html.py
@@ -96,4 +94,5 @@ python make_html.py <out folder> <eval folder> <iter>
 This repository utilizes the codes of following impressive repositories  
 - [chainer-gan-lib](https://github.com/pfnet-research/chainer-gan-lib)  
 - [chainer-cyclegan](https://github.com/Aixile/chainer-cyclegan)  
+- [chainer-cyclegan](https://github.com/naoto0804/chainer-cyclegan)  
 
