@@ -1,6 +1,6 @@
 # chainer-StarGAN
 chainer implementation of StarGAN  
-### Caution: This code currently does not work well. Something wrong. 
+### Caution: This code currently does not work well. I'm happy if you help me. 
 
 ### Requirement  
 - chainer v4 (you can use v2 by following statements)  
