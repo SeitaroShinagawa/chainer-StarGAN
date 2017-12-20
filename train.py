@@ -12,7 +12,7 @@ from common import celebA
 from updater import *
 from evaluation import *
 from common.record import record_setting
-from chainerui.extensions import CommandsExtension
+#from chainerui.extensions import CommandsExtension
 
 def main():
     parser = argparse.ArgumentParser(
@@ -155,7 +155,7 @@ def main():
         ), trigger=(args.eval_interval ,'iteration')
     )
    
-    trainer.extend(CommandsExtension())
+    #trainer.extend(CommandsExtension())
     # Run the training
     trainer.run()
 
