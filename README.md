@@ -1,11 +1,17 @@
 # chainer-StarGAN
-chainer v2 implementation of StarGAN  
+chainer implementation of StarGAN  
 ### Caution: This code currently does not work well. Something wrong. 
 
 ### Requirement  
-- chainer v2
+- chainer v4 (you can use v2 by following statements)  
 - cv2
 - pillow
+
+To use v2, modify updater.py as below,
+```pytohn
+L.119        #dydx = self.dis.differentiable_backward(xp.ones_like(y_mid.data))   #uncomment
+L.120        dydx, = chainer.grad([y_mid],[x_mid_v], enable_double_backprop=True) #comment out
+```
 
 ## Progress 
 Under testing on CelebA dataset
